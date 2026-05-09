@@ -579,6 +579,27 @@ esp_err_t bsp_display_new_with_handles(const bsp_display_config_t *config, bsp_l
         .lane_bit_rate_mbps = config->dsi_bus.lane_bit_rate_mbps,
     };
 
+#if CONFIG_BSP_LCD_TYPE_HDMI
+    /* Override lane_bit_rate_mbps for HDMI based on pixel clock.
+     * ESP32-P4 valid pixel clocks (PLL_F240M / integer, multiples of 5 MHz): 20, 30, 40, 60, 80 MHz.
+     * Lane bit rate = pixel_clock_khz * 24 / num_lanes / 1000 */
+    switch (config->hdmi_resolution) {
+    case BSP_HDMI_RES_800x600:
+        bus_config.lane_bit_rate_mbps = 480;  /* 40MHz * 24 / 2 lanes */
+        break;
+    case BSP_HDMI_RES_1024x768:
+    case BSP_HDMI_RES_1280x720:
+    case BSP_HDMI_RES_1280x800:
+        bus_config.lane_bit_rate_mbps = 720;  /* 60MHz * 24 / 2 lanes */
+        break;
+    case BSP_HDMI_RES_1920x1080:
+        bus_config.lane_bit_rate_mbps = 960;  /* 80MHz * 24 / 2 lanes */
+        break;
+    default:
+        break;
+    }
+#endif
+
     ESP_RETURN_ON_ERROR(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus), TAG, "New DSI bus init failed");
 
 #if !CONFIG_BSP_LCD_TYPE_HDMI
